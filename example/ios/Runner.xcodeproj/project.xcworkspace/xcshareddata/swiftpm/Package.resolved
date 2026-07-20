@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "whiskrkit-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/whiskrkit/whiskrkit-swift.git",
+      "state" : {
+        "revision" : "51c204c718c4dfa86e9507ca70d2dbc7dafd7ecb",
+        "version" : "0.1.9"
+      }
+    }
+  ],
+  "version" : 2
+}
