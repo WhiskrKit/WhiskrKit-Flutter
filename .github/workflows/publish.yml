@@ -1,0 +1,45 @@
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      # Publish whenever a version tag is pushed, e.g. v0.1.1.
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  # Manual re-run (e.g. pub.dev hiccuped) — pick the tag as the ref in the UI.
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # id-token: write is what makes this tokenless: pub.dev's Automated
+    # Publishing exchanges this short-lived OIDC token for an upload credential,
+    # so there is no long-lived secret to store or rotate. Must be configured
+    # on pub.dev (package Admin -> Automated publishing) for the exchange to work.
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Verify tag matches pubspec version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME (version $TAG_VERSION) does not match pubspec.yaml version $PKG_VERSION. Bump pubspec.yaml and re-tag."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Publish
+        run: flutter pub publish --force
