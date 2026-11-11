@@ -78,8 +78,9 @@ class FlutterWhiskrkit {
   }
 
   /// Sets a global attribute that is sent with every survey response submitted
-  /// afterwards, for example the user's plan, to filter results in the
-  /// dashboard. Attributes live in memory only, so set them again at launch.
+  /// afterwards, for example the user's plan or an experiment variant; it is
+  /// stored with each response. Attributes live in memory only, so set them
+  /// again at launch. See https://whiskrkit.eu/docs/attributes/.
   ///
   /// [value] must be a [String], a finite [num] or a [bool]; `null` removes
   /// the attribute. Any other type throws an [ArgumentError].

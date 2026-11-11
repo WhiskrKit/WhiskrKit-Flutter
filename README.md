@@ -108,8 +108,9 @@ platform** — never with a survey outcome. `initialize` must be called before
 ### Attributes
 
 Attach context about the current user or session to every survey response
-submitted afterwards, so you can filter results in the dashboard. Attributes
-live in memory only, so set them again at launch.
+submitted afterwards, such as the user's plan or an experiment variant. They're
+stored with each response; see [Attributes](https://whiskrkit.eu/docs/attributes/) for what to send and what
+not. Attributes live in memory only, so set them again at launch.
 
 ```dart
 await whiskrkit.setAttribute('plan', 'pro');
@@ -123,7 +124,7 @@ Values are strings, finite numbers or bools; anything else throws an
 `ArgumentError`. Limits: 20 attributes, keys of 1 to 64 characters, text
 values up to 256 characters; the native SDK trims the rest. Do not send
 personal data (emails, phone numbers, names, IBANs, card numbers): the server
-drops it.
+drops it See [Privacy](https://whiskrkit.eu/docs/attributes/#privacy).
 
 ### Survey completion
 
