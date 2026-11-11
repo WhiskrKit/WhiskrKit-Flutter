@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
@@ -10,9 +11,9 @@ void main() {
 /// Manual test harness for the WhiskrKit Flutter plugin.
 ///
 /// WhiskrKit is fire-and-forget by design: none of the calls report an
-/// outcome, so the log below records *actions taken*, not SDK events. The
-/// survey either appears or it doesn't; failure details go to the native log
-/// (Console.app / Logcat).
+/// outcome, so the log below records *actions taken*, plus the one SDK event,
+/// a submitted survey. The survey either appears or it doesn't; failure
+/// details go to the native log (Console.app / Logcat).
 class WhiskrKitExample extends StatefulWidget {
   const WhiskrKitExample({super.key});
 
@@ -28,6 +29,23 @@ class _WhiskrKitExampleState extends State<WhiskrKitExample> {
 
   // Built-in mock survey IDs (withMockedSurveys: true). Toast and sheet IDs
   // exist on both platforms; the fullscreen mock ID differs per platform.
+  StreamSubscription<SurveyCompletion>? _completions;
+
+  @override
+  void initState() {
+    super.initState();
+    // The one event WhiskrKit reports: the user submitted a survey.
+    _completions = _whiskrkit.onSurveyCompleted.listen((completion) {
+      final answers = completion.answers
+          .map((answer) => '${answer.questionId}=${answer.value}')
+          .join(', ');
+      _appendLog(
+        'completed "${completion.surveyId}": '
+        '${answers.isEmpty ? 'no answers' : answers}',
+      );
+    });
+  }
+
   late final _presets = <String, String>{
     'Toast': 'welcome-toast',
     'Sheet': 'choice-survey',
@@ -44,8 +62,10 @@ class _WhiskrKitExampleState extends State<WhiskrKitExample> {
 
   Future<void> _initialize() async {
     await _whiskrkit.initialize('example-api-key', withMockedSurveys: true);
+    await _whiskrkit.setAttribute('example', 'flutter');
     setState(() => _initialized = true);
     _appendLog('initialize(withMockedSurveys: true)');
+    _appendLog('setAttribute("example", "flutter")');
   }
 
   Future<void> _present() async {
@@ -129,8 +149,7 @@ class _WhiskrKitExampleState extends State<WhiskrKitExample> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Action log (calls made, not SDK events — WhiskrKit reports '
-                'no outcome)',
+                'Log (calls made, and completed surveys reported by WhiskrKit)',
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               const SizedBox(height: 4),
@@ -163,6 +182,7 @@ class _WhiskrKitExampleState extends State<WhiskrKitExample> {
 
   @override
   void dispose() {
+    _completions?.cancel();
     _surveyIdController.dispose();
     super.dispose();
   }
