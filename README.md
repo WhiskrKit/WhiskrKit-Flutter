@@ -17,7 +17,7 @@ rather than surfaced to Dart (see [Design notes](#design-notes)).
 ## Requirements
 
 - iOS 17+
-- Android minSdk 26+
+- Android minSdk 24+
 
 ## Installation
 
@@ -57,7 +57,7 @@ end
 ### Android
 
 The `eu.whiskrkit:whiskrkit-android` dependency resolves from Maven Central —
-no extra setup. Just make sure your app's `minSdkVersion` is 26 or higher
+no extra setup. Just make sure your app's `minSdkVersion` is 24 or higher
 (`android/app/build.gradle`).
 
 ## Quick start

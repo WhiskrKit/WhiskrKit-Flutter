@@ -49,8 +49,8 @@ android {
     }
 
     defaultConfig {
-        // The WhiskrKit SDK requires minSdk 26.
-        minSdk = 26
+        // The WhiskrKit SDK requires minSdk 24.
+        minSdk = 24
     }
 
     buildFeatures {

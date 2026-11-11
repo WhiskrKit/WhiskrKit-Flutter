@@ -9,6 +9,8 @@ Mirrors native SDK version 0.2.0.
   submits a survey, with the survey id and each answer's question id, question
   type and value. It fires whether or not the response reaches the server, and
   not when a survey is dismissed without submitting.
+- Android minSdk is now 24 (was 26), following whiskrkit-android 0.2.0, which
+  also needs only Jetpack Compose 1.10.
 - Requires whiskrkit-swift 0.2.0 and whiskrkit-android 0.2.0. Those versions
   also bring translated built-in strings that follow the survey's language and
   the "Powered by WhiskrKit" line on the Free plan, with no changes needed in
