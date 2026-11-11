@@ -83,7 +83,7 @@ kotlin {
 dependencies {
     // The native WhiskrKit SDK. Its Compose runtime/ui dependencies are `api`,
     // which is what lets this module reference ComposeView and WhiskrKitHost.
-    implementation("eu.whiskrkit:whiskrkit-android:0.1.3")
+    implementation("eu.whiskrkit:whiskrkit-android:0.2.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")

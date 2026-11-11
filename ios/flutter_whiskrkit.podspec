@@ -9,13 +9,13 @@
 #   target 'Runner' do
 #     spm_pkg "WhiskrKit",
 #             :url => "https://github.com/whiskrkit/whiskrkit-swift.git",
-#             :version => "0.1.9"
+#             :version => "0.2.0"
 #     ...
 #   end
 #
 Pod::Spec.new do |s|
   s.name             = 'flutter_whiskrkit'
-  s.version          = '0.1.0'
+  s.version          = '0.2.0'
   s.summary          = 'Flutter wrapper for the WhiskrKit in-app survey SDK.'
   s.description      = <<-DESC
 Flutter wrapper for WhiskrKit, the native in-app survey SDK. Surveys render as

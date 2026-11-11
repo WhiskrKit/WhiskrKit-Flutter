@@ -14,9 +14,9 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "FlutterFramework", path: "../FlutterFramework"),
-        // The native WhiskrKit SDK. 0.1.9 is the first release carrying the
-        // UIKit attach(to:) API this plugin relies on.
-        .package(url: "https://github.com/whiskrkit/whiskrkit-swift.git", exact: "0.1.9")
+        // The native WhiskrKit SDK. 0.2.0 adds the attributes and the
+        // onSurveyCompleted callback this plugin bridges.
+        .package(url: "https://github.com/whiskrkit/whiskrkit-swift.git", exact: "0.2.0")
     ],
     targets: [
         .target(
