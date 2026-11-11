@@ -4,12 +4,16 @@
 /// by the native WhiskrKit SDKs — this plugin only triggers presentation; no
 /// survey UI lives in Flutter.
 ///
-/// The API is deliberately **fire-and-forget**, mirroring the native SDKs:
-/// calls do not report outcomes, and failures are logged natively rather than
-/// surfaced to Dart.
+/// Calls are **fire-and-forget**, mirroring the native SDKs: they do not
+/// report outcomes, and failures are logged natively rather than surfaced to
+/// Dart. The one event is [FlutterWhiskrkit.onSurveyCompleted], which tells
+/// you when the user submits a survey.
 library;
 
 import 'flutter_whiskrkit_platform_interface.dart';
+import 'survey_completion.dart';
+
+export 'survey_completion.dart';
 
 /// Entry point of the WhiskrKit Flutter plugin.
 ///
@@ -71,5 +75,66 @@ class FlutterWhiskrkit {
   /// look the same from Dart: no survey appears.
   Future<void> checkAndPresent(String surveyId) {
     return FlutterWhiskrkitPlatform.instance.checkAndPresent(surveyId);
+  }
+
+  /// Sets a global attribute that is sent with every survey response submitted
+  /// afterwards, for example the user's plan, to filter results in the
+  /// dashboard. Attributes live in memory only, so set them again at launch.
+  ///
+  /// [value] must be a [String], a finite [num] or a [bool]; `null` removes
+  /// the attribute. Any other type throws an [ArgumentError].
+  ///
+  /// Do not send personal data (emails, phone numbers, names, IBANs, card
+  /// numbers): the server drops it. Limits: 20 attributes, keys of 1 to 64
+  /// characters, text values up to 256 characters; the SDK trims the rest.
+  Future<void> setAttribute(String key, Object? value) {
+    if (value != null) _checkAttributeValue(key, value);
+    return FlutterWhiskrkitPlatform.instance.setAttribute(key, value);
+  }
+
+  /// Sets several global attributes at once, merged into the current ones.
+  /// See [setAttribute] for the allowed values.
+  Future<void> setAttributes(Map<String, Object> attributes) {
+    attributes.forEach(_checkAttributeValue);
+    return FlutterWhiskrkitPlatform.instance.setAttributes(attributes);
+  }
+
+  /// Removes one global attribute.
+  Future<void> removeAttribute(String key) {
+    return FlutterWhiskrkitPlatform.instance.removeAttribute(key);
+  }
+
+  /// Removes all global attributes.
+  Future<void> clearAttributes() {
+    return FlutterWhiskrkitPlatform.instance.clearAttributes();
+  }
+
+  /// Emits each time the user submits a survey, with the survey id and the
+  /// answers given (question id, question type and value).
+  ///
+  /// It fires as soon as the user submits, whether or not the response reaches
+  /// the server (a failed submission is queued and retried natively), and
+  /// never when a survey is dismissed without submitting. It also fires with
+  /// mocked surveys. Listen before calling [initialize] to be sure not to miss
+  /// an event.
+  ///
+  /// ```dart
+  /// whiskrkit.onSurveyCompleted.listen((completion) {
+  ///   analytics.log('survey_completed', completion.surveyId);
+  /// });
+  /// ```
+  Stream<SurveyCompletion> get onSurveyCompleted =>
+      FlutterWhiskrkitPlatform.instance.onSurveyCompleted;
+
+  static void _checkAttributeValue(String key, Object value) {
+    final ok =
+        value is String || value is bool || (value is num && value.isFinite);
+    if (!ok) {
+      throw ArgumentError.value(
+        value,
+        key,
+        'Attribute values must be a String, a finite num or a bool',
+      );
+    }
   }
 }

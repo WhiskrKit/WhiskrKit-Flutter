@@ -1,6 +1,7 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'flutter_whiskrkit_method_channel.dart';
+import 'survey_completion.dart';
 
 abstract class FlutterWhiskrkitPlatform extends PlatformInterface {
   /// Constructs a FlutterWhiskrkitPlatform.
@@ -33,5 +34,26 @@ abstract class FlutterWhiskrkitPlatform extends PlatformInterface {
 
   Future<void> checkAndPresent(String surveyId) {
     throw UnimplementedError('checkAndPresent() has not been implemented.');
+  }
+
+  /// [value] is a [String], a finite [num] or a [bool]; `null` removes [key].
+  Future<void> setAttribute(String key, Object? value) {
+    throw UnimplementedError('setAttribute() has not been implemented.');
+  }
+
+  Future<void> setAttributes(Map<String, Object> attributes) {
+    throw UnimplementedError('setAttributes() has not been implemented.');
+  }
+
+  Future<void> removeAttribute(String key) {
+    throw UnimplementedError('removeAttribute() has not been implemented.');
+  }
+
+  Future<void> clearAttributes() {
+    throw UnimplementedError('clearAttributes() has not been implemented.');
+  }
+
+  Stream<SurveyCompletion> get onSurveyCompleted {
+    throw UnimplementedError('onSurveyCompleted has not been implemented.');
   }
 }
