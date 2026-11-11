@@ -1,6 +1,6 @@
 name: flutter_whiskrkit
 description: "Flutter wrapper for the WhiskrKit in-app survey SDK. Surveys render as fully native UI; this plugin only triggers presentation."
-version: 0.1.0
+version: 0.2.0
 homepage: https://whiskrkit.eu
 repository: https://github.com/WhiskrKit/whiskrkit-flutter
 

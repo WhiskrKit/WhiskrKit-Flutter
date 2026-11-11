@@ -48,7 +48,7 @@ plugin 'cocoapods-spm'
 target 'Runner' do
   spm_pkg "WhiskrKit",
           :url => "https://github.com/whiskrkit/whiskrkit-swift.git",
-          :version => "0.1.9"
+          :version => "0.2.0"
   # ...
 end
 ```
@@ -94,21 +94,77 @@ await whiskrkit.present('welcome-toast');
 | `initialize(apiKey, {withMockedSurveys})` | `String apiKey`, `bool withMockedSurveys = false` | `Future<void>` | iOS, Android |
 | `present(surveyId)` | `String surveyId` | `Future<void>` | iOS, Android |
 | `checkAndPresent(surveyId)` | `String surveyId` | `Future<void>` | iOS, Android |
+| `setAttribute(key, value)` | `String key`, `String`/`num`/`bool` value, `null` removes | `Future<void>` | iOS, Android |
+| `setAttributes(attributes)` | `Map<String, Object>` | `Future<void>` | iOS, Android |
+| `removeAttribute(key)` | `String key` | `Future<void>` | iOS, Android |
+| `clearAttributes()` | — | `Future<void>` | iOS, Android |
+| `onSurveyCompleted` | — | `Stream<SurveyCompletion>` | iOS, Android |
 
 The returned futures complete when the call has been **dispatched to the
 platform** — never with a survey outcome. `initialize` must be called before
-the other two; calls made without it are silent no-ops (logged natively).
+`present` and `checkAndPresent`; calls made without it are silent no-ops
+(logged natively).
+
+### Attributes
+
+Attach context about the current user or session to every survey response
+submitted afterwards, so you can filter results in the dashboard. Attributes
+live in memory only, so set them again at launch.
+
+```dart
+await whiskrkit.setAttribute('plan', 'pro');
+await whiskrkit.setAttribute('sessions', 3);
+await whiskrkit.setAttributes({'tier': 'gold', 'beta': true}); // merges
+await whiskrkit.setAttribute('plan', null);                     // removes one
+await whiskrkit.clearAttributes();
+```
+
+Values are strings, finite numbers or bools; anything else throws an
+`ArgumentError`. Limits: 20 attributes, keys of 1 to 64 characters, text
+values up to 256 characters; the native SDK trims the rest. Do not send
+personal data (emails, phone numbers, names, IBANs, card numbers): the server
+drops it.
+
+### Survey completion
+
+`onSurveyCompleted` emits each time the user submits a survey, with the survey
+id and the submitted answers:
+
+```dart
+whiskrkit.onSurveyCompleted.listen((completion) {
+  analytics.log('survey_completed', completion.surveyId);
+  for (final answer in completion.answers) {
+    switch (answer.value) {
+      case ScoreValue(:final score):
+        print('${answer.questionId}: $score');
+      case ThumbsValue(:final isUp):
+        print('${answer.questionId}: ${isUp ? 'up' : 'down'}');
+      case TextValue(:final text):
+        print('${answer.questionId}: $text');
+      case ChoicesValue(:final optionIds):
+        print('${answer.questionId}: $optionIds');
+    }
+  }
+});
+```
+
+Each `SurveyAnswer` has a `questionId`, a `questionType` (`scaleRating`,
+`symbolRating`, `thumbsRating`, `textualSurvey` or `multipleChoice`) and a
+`value`. Unanswered questions are left out. It fires as soon as the user
+submits, whether or not the response reaches the server (a failed submission
+is queued and retried natively), never when a survey is dismissed without
+submitting, and also with mocked surveys.
 
 ## Design notes
 
 **Fire-and-forget, silent failure.** The native WhiskrKit SDKs deliberately
-never surface errors or survey lifecycle events to the host app: the SDK keeps
-its own record of shown and completed surveys for eligibility and repeat-policy
-decisions, and failures (bad API key, unknown survey ID, no network) simply
-mean no survey appears. The plugin mirrors that contract instead of inventing
-a richer one, so there are no completion events, no streams, and no error
-codes. When debugging, watch the native logs: Console.app (subsystem
-`WhiskrKit`) on iOS, Logcat (tag `WhiskrKit`) on Android.
+never surface errors to the host app: the SDK keeps its own record of shown
+and completed surveys for eligibility and repeat-policy decisions, and
+failures (bad API key, unknown survey ID, no network) simply mean no survey
+appears. The plugin mirrors that contract, so there are no error codes. The
+one event is `onSurveyCompleted`, which the native SDKs also expose. When
+debugging, watch the native logs: Console.app (subsystem `WhiskrKit`) on iOS,
+Logcat (tag `WhiskrKit`) on Android.
 
 **How attachment works.** Native apps attach WhiskrKit with a SwiftUI view
 modifier or a Compose host composable. The plugin does the equivalent
