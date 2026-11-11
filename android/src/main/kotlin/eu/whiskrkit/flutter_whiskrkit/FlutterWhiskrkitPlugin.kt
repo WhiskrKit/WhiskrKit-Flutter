@@ -13,6 +13,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import eu.whiskrkit.SurveyCompletion
 import eu.whiskrkit.WhiskrKit
 import eu.whiskrkit.ui.WhiskrKitHost
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -33,6 +34,9 @@ import io.flutter.plugin.common.MethodChannel.Result
  *
  * [ActivityAware] is required because survey presentation needs a host mounted
  * over the current Activity's content view.
+ *
+ * The one call in the other direction is `onSurveyCompleted`, sent on the same
+ * channel when the user submits a survey.
  */
 class FlutterWhiskrkitPlugin :
     FlutterPlugin,
@@ -47,6 +51,10 @@ class FlutterWhiskrkitPlugin :
         applicationContext = flutterPluginBinding.applicationContext
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_whiskrkit")
         channel.setMethodCallHandler(this)
+        // Called on the main thread, where MethodChannel calls must be made.
+        WhiskrKit.setOnSurveyCompletedListener { completion ->
+            channel.invokeMethod("onSurveyCompleted", completion.toChannelMap())
+        }
     }
 
     override fun onMethodCall(
@@ -99,9 +107,60 @@ class FlutterWhiskrkitPlugin :
                 result.success(null)
             }
 
+            "setAttribute" -> {
+                val key = call.argument<String>("key")
+                if (key == null) {
+                    result.error("bad-args", "setAttribute requires a String key", null)
+                    return
+                }
+                val value: Any? = call.argument("value")
+                if (value != null && !isAttributeValue(value)) {
+                    result.error("bad-args", "Attribute values must be a String, a finite number or a bool", null)
+                    return
+                }
+                mainHandler.post {
+                    when (value) {
+                        null -> WhiskrKit.removeAttribute(key)
+                        is String -> WhiskrKit.setAttribute(key, value)
+                        is Boolean -> WhiskrKit.setAttribute(key, value)
+                        is Int -> WhiskrKit.setAttribute(key, value)
+                        is Long -> WhiskrKit.setAttribute(key, value)
+                        is Double -> WhiskrKit.setAttribute(key, value)
+                    }
+                }
+                result.success(null)
+            }
+
+            "setAttributes" -> {
+                val raw = call.argument<Map<String, Any?>>("attributes")
+                if (raw == null) {
+                    result.error("bad-args", "setAttributes requires a map of attributes", null)
+                    return
+                }
+                val attributes = raw.filterValues { it != null && isAttributeValue(it) }.mapValues { it.value!! }
+                mainHandler.post { WhiskrKit.setAttributes(attributes) }
+                result.success(null)
+            }
+
+            "removeAttribute" -> {
+                val key = call.argument<String>("key")
+                if (key == null) {
+                    result.error("bad-args", "removeAttribute requires a String key", null)
+                    return
+                }
+                mainHandler.post { WhiskrKit.removeAttribute(key) }
+                result.success(null)
+            }
+
+            "clearAttributes" -> {
+                mainHandler.post { WhiskrKit.clearAttributes() }
+                result.success(null)
+            }
+
             else -> result.notImplemented()
         }
     }
+
 
     /**
      * Mounts the WhiskrKitHost composable in a ComposeView laid over the
@@ -149,6 +208,7 @@ class FlutterWhiskrkitPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        WhiskrKit.setOnSurveyCompletedListener(null)
         applicationContext = null
     }
 
@@ -205,3 +265,38 @@ private class ComposeHostOwner : SavedStateRegistryOwner {
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
     }
 }
+
+/** Whether [value] (as decoded by the Flutter codec) can be sent as an attribute. */
+internal fun isAttributeValue(value: Any): Boolean = when (value) {
+    is String, is Boolean, is Int, is Long -> true
+    is Double -> value.isFinite()
+    else -> false
+}
+
+/** The map the Dart side reads; same shape and type names as the iOS plugin. */
+internal fun SurveyCompletion.toChannelMap(): Map<String, Any> = mapOf(
+    "surveyId" to surveyId,
+    "answers" to answers.map { answer ->
+        val (valueType, value) = when (val v = answer.value) {
+            is SurveyCompletion.Value.Score -> "score" to v.score
+            is SurveyCompletion.Value.Thumbs -> "thumbs" to v.isUp
+            is SurveyCompletion.Value.Text -> "text" to v.text
+            is SurveyCompletion.Value.Choices -> "choices" to v.optionIds
+        }
+        mapOf(
+            "questionId" to answer.questionId,
+            "questionType" to answer.questionType.channelName,
+            "valueType" to valueType,
+            "value" to value,
+        )
+    },
+)
+
+internal val SurveyCompletion.QuestionType.channelName: String
+    get() = when (this) {
+        SurveyCompletion.QuestionType.SCALE_RATING -> "scaleRating"
+        SurveyCompletion.QuestionType.SYMBOL_RATING -> "symbolRating"
+        SurveyCompletion.QuestionType.THUMBS_RATING -> "thumbsRating"
+        SurveyCompletion.QuestionType.TEXTUAL_SURVEY -> "textualSurvey"
+        SurveyCompletion.QuestionType.MULTIPLE_CHOICE -> "multipleChoice"
+    }

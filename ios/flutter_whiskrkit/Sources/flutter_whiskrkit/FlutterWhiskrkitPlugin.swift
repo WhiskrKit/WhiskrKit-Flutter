@@ -9,11 +9,19 @@ import WhiskrKit
 /// fire-and-forget, mirroring the SDK's silent-failure contract — the `result`
 /// completes when the call is dispatched, never with a survey outcome.
 /// Failures go to the native log (Console.app, subsystem WhiskrKit).
+///
+/// The one call in the other direction is `onSurveyCompleted`, sent on the same
+/// channel when the user submits a survey.
 public class FlutterWhiskrkitPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "flutter_whiskrkit", binaryMessenger: registrar.messenger())
     let instance = FlutterWhiskrkitPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
+    Task { @MainActor in
+      WhiskrKit.shared.onSurveyCompleted = { completion in
+        channel.invokeMethod("onSurveyCompleted", arguments: SurveyCompletionMapper.map(completion))
+      }
+    }
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -54,6 +62,49 @@ public class FlutterWhiskrkitPlugin: NSObject, FlutterPlugin {
       }
       result(nil)
 
+    case "setAttribute":
+      guard let key = args?["key"] as? String else {
+        result(FlutterError(code: "bad-args", message: "setAttribute requires a String key", details: nil))
+        return
+      }
+      let raw = args?["value"]
+      let value = AttributeConversion.value(raw)
+      if value == nil, let raw, !(raw is NSNull) {
+        result(FlutterError(code: "bad-args", message: "Attribute values must be a String, a finite number or a bool", details: nil))
+        return
+      }
+      Task { @MainActor in
+        WhiskrKit.shared.setAttribute(key, value)
+      }
+      result(nil)
+
+    case "setAttributes":
+      guard let raw = args?["attributes"] as? [String: Any] else {
+        result(FlutterError(code: "bad-args", message: "setAttributes requires a map of attributes", details: nil))
+        return
+      }
+      let attributes = raw.compactMapValues(AttributeConversion.value)
+      Task { @MainActor in
+        WhiskrKit.shared.setAttributes(attributes)
+      }
+      result(nil)
+
+    case "removeAttribute":
+      guard let key = args?["key"] as? String else {
+        result(FlutterError(code: "bad-args", message: "removeAttribute requires a String key", details: nil))
+        return
+      }
+      Task { @MainActor in
+        WhiskrKit.shared.removeAttribute(key)
+      }
+      result(nil)
+
+    case "clearAttributes":
+      Task { @MainActor in
+        WhiskrKit.shared.clearAttributes()
+      }
+      result(nil)
+
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -72,5 +123,54 @@ public class FlutterWhiskrkitPlugin: NSObject, FlutterPlugin {
       return
     }
     WhiskrKit.shared.attach(to: window)
+  }
+}
+
+/// Turns a value from the Flutter codec into a WhiskrKit attribute value.
+enum AttributeConversion {
+  static func value(_ raw: Any?) -> AttributeValue? {
+    switch raw {
+    case let string as String:
+      return .string(string)
+    case let number as NSNumber:
+      // Dart bools and numbers both arrive as NSNumber; only a CFBoolean is a bool.
+      if CFGetTypeID(number) == CFBooleanGetTypeID() {
+        return .bool(number.boolValue)
+      }
+      let double = number.doubleValue
+      return double.isFinite ? .number(double) : nil
+    default:
+      return nil
+    }
+  }
+}
+
+/// Turns a survey completion into the map the Dart side reads.
+enum SurveyCompletionMapper {
+  static func map(_ completion: SurveyCompletion) -> [String: Any] {
+    [
+      "surveyId": completion.surveyId,
+      "answers": completion.answers.map { answer -> [String: Any] in
+        var map: [String: Any] = [
+          "questionId": answer.questionId,
+          "questionType": answer.questionType.rawValue,
+        ]
+        switch answer.value {
+        case .score(let score):
+          map["valueType"] = "score"
+          map["value"] = score
+        case .thumbs(let isUp):
+          map["valueType"] = "thumbs"
+          map["value"] = isUp
+        case .text(let text):
+          map["valueType"] = "text"
+          map["value"] = text
+        case .choices(let ids):
+          map["valueType"] = "choices"
+          map["value"] = ids
+        }
+        return map
+      },
+    ]
   }
 }

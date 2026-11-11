@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/whiskrkit/whiskrkit-swift.git",
       "state" : {
-        "revision" : "51c204c718c4dfa86e9507ca70d2dbc7dafd7ecb",
-        "version" : "0.1.9"
+        "revision" : "0b97c96052677f806be5f6686e55c3c977a48211",
+        "version" : "0.2.0"
       }
     }
   ],
