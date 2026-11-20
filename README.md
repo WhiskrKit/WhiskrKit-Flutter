@@ -1,7 +1,7 @@
 ![WhiskrKit logo](https://whiskrkit.eu/WhiskrKit_logo.png)
 # WhiskrKit for Flutter - The purr-fect feedback toolkit for modern apps.
 
-![version](https://img.shields.io/badge/version-0.1.0-blue) ![MIT](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.3.0-blue) ![MIT](https://img.shields.io/badge/license-MIT-green)
 
 WhiskrKit provides a flexible and easy-to-use API for presenting questionnaires and
 feedback forms in your Flutter applications. This is the Flutter wrapper for
@@ -48,7 +48,7 @@ plugin 'cocoapods-spm'
 target 'Runner' do
   spm_pkg "WhiskrKit",
           :url => "https://github.com/whiskrkit/whiskrkit-swift.git",
-          :version => "0.2.0"
+          :version => "0.3.0"
   # ...
 end
 ```
